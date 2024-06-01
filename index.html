@@ -1,0 +1,365 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz App</title>
+    <style>
+        body {
+            background-color: black;
+            color: white;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        #score-counter {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px;
+            background-color: #333;
+            border-bottom-right-radius: 10px;
+            color: white;
+            z-index: 999;
+        }
+
+        #quiz-container {
+            max-width: 600px;
+            margin: auto;
+            padding: 60px 20px 20px; /* تم تعديل ال padding ليضمن عدم تغطية الصورة */
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            background-color: rgba(255, 255, 255, 0.1);
+            position: relative; /* تمت إضافة position: relative; للسماح لـ #score-counter بالتحكم فيه */
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            color: white;
+            background-color: #2196F3;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        button {
+            background-color: #2196F3;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0c0c0c;
+        }
+
+        #timer {
+            margin-bottom: 10px;
+        }
+
+        #result-container {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .result-text {
+            margin-bottom: 10px;
+        }
+
+        .correct {
+            background-color: green;
+            color: white;
+        }
+
+        .incorrect {
+            background-color: red;
+            color: white;
+        }
+
+        /* CSS for displaying images to fit the screen */
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="score-counter">Score: <span id="score">0</span></div>
+
+    <div id="quiz-container">
+        <img id="question-image" src="" alt="Question Image">
+        <div id="choices"></div>
+        <button onclick="checkAnswer()">Submit Answer</button>
+        <p id="timer"></p>
+    </div>
+
+    <div id="result-container">
+        <h2>Quiz Result</h2>
+        <p class="result-text" id="result"></p>
+        <div id="correct-answers"></div>
+        <button id="retryBtn" style="display: none;" onclick="retryQuiz()">Retry Quiz</button>
+    </div>
+
+    <script>
+        var currentQuestion = 0;
+        var score = 0;
+        var timeLeft = 600; // تحديد عدد الثواني
+        var timerInterval;
+
+        var quizData = [
+
+        {
+  "question": "في أي عام تم إطلاق مبادرة 'أطفال بلا مأوى' لحماية أطفال الشوارع ",
+  "choices": ["2012", "2014", "2016", "2018"],
+  "correctAnswer": "2014"
+},
+{
+    "question": "هل تم افتتاح مجمع مصانع الأسمدة الأزوتية بالعين السخنة في السويس عام 2022",
+    "choices": ["صح", "خطأ"],
+    "correctAnswer": "صح"
+},
+{
+    "question": "هل تم افتتاح مصنعي إنتاج الغازات الطبية والصناعية ومحطة توليد الطاقة الثالثية بمجمع الصناعات الكيماوية بأبو رواش بمحافظة الجيزة عام 2022",
+    "choices": ["صح", "خطأ"],
+    "correctAnswer": "صح"
+},
+{
+    "question": "في أي محافظة تقع مدينة الجلالة الجديدة",
+    "choices": ["القاهرة", "الإسكندرية", "السويس", "بورسعيد"],
+    "correctAnswer": "السويس"
+},
+{
+    "question": "هل يدخل الفحم في صناعة الصلب",
+    "choices": ["صح", "خطأ"],
+    "correctAnswer": "صح"
+},
+{
+    "question": "ما هي إحدى مبادرات دعم المرأة المعيلة التي تم إطلاقها عام 2017",
+    "choices": ["مبادرة 'تكافل وكرامة'.", "مبادرة 'حياة كريمة'.", "مستورة"],
+    "correctAnswer": "مستورة"
+},
+{
+    "question": "في أي عام تم إطلاق المبادرة الوطنية لتمكين الفتاة 'دوي' من قبل المجلس القومي للمرأة",
+    "choices": ["2015", "2017", "2019", "2021"],
+    "correctAnswer": "2019"
+},
+{
+    "question": "من هي الدولة التي رفضت قرار تقسيم فلسطين عام 1947",
+    "choices": ["الولايات المتحدة الأمريكية", "الاتحاد السوفيتي", "بريطانيا", "فرنسا"],
+    "correctAnswer": "بريطانيا"
+},
+{
+    "question": "ما هي المحافظة التي لا تخترقها ترعة المحمودية",
+    "choices": ["محافظة البحيرة", "محافظة الإسكندرية", "محافظة المنوفية"],
+    "correctAnswer": "محافظة المنوفية"
+},
+{
+    "question": "في أي عام انعقد مؤتمر هيدروجين مصر الدولي الأول",
+    "choices": ["2021", "2022", "2023", "2024"],
+    "correctAnswer": "2023"
+},
+{
+    "question": "من هو مؤسس جريدة 'اللواء' ",
+    "choices": ["محمد فريد", "أحمد عرابي", "مصطفى كامل", "سعد زغلول"],
+    "correctAnswer": "مصطفى كامل"
+},
+{
+    "question": "في أي محافظة يقع كوبري الشهيد أحمد المنسى",
+    "choices": ["القاهرة", "الإسكندرية", "الإسماعيلية", "السويس"],
+    "correctAnswer": "الإسماعيلية"
+},
+{
+    "question": "في أي محافظة تقع محطة الصرف الصحي في جبل أبو صير",
+    "choices": ["أسيوط", "بني سويف", "الفيوم", "المنيا"],
+    "correctAnswer": "بني سويف"
+},
+{
+    "question": "في أي محافظة تقع محطة الصرف الصحي بقرية أبو صوير",
+    "choices": ["القاهرة", "الإسكندرية", "الإسماعيلية", "بورسعيد"],
+    "correctAnswer": "الإسماعيلية"
+},
+{
+    "question": "في أي محافظة تقع صومعتي برقاش وبني سلامة ",
+    "choices": ["محافظة القاهرة", "محافظة الجيزة", "محافظة الإسكندرية", "محافظة سوهاج"],
+    "correctAnswer": "محافظة الجيزة"
+},
+{
+    "question": "اطلقت مبادرة نور حياة عام",
+    "choices": ["2019", "2020", "2021", "2022"],
+    "correctAnswer": "2019"
+},
+          {
+    "question": "في عهد أي حاكم مصري تم إنشاء أول خط سكة حديد يربط بين القاهرة والإسكندرية",
+    "choices": ["محمد علي", "عباس الأول", "إسماعيل باشا", "فؤاد الأول"],
+    "correctAnswer": "عباس الأول"
+},
+          {
+    "question": "أطول برج في أفريقيا ",
+    "choices": ["برج خليفة", "برج القاهرة", "البرج الأيقوني"],
+    "correctAnswer": "البرج الأيقوني"
+},
+{
+  "question": "ما هو أكبر كواكب المجموعة الشمسية ",
+  "choices": ["كوكب الأرض", "كوكب زحل", "كوكب المشتري", "كوكب أورانوس"],
+  "correctAnswer": "كوكب المشتري"
+},
+{
+  "question": "ما هي أكبر محافظة من حيث إنتاج الفاكهة في مصر ",
+  "choices": ["الشرقية", "الدقهلية", "البحيرة", "القليوبية"],
+  "correctAnswer": "البحيرة"
+},
+        
+ 
+        ];
+
+        // قم بترتيب الأسئلة بشكل عشوائي
+        shuffleArray(quizData);
+
+        function shuffleArray(array) {
+            for (var i = array.length - 1; i > 0; i--) {
+                var j = Math.floor(Math.random() * (i + 1));
+                var temp = array[i];
+                array[i] = array[j];
+                array[j] = temp;
+            }
+            return array;
+        }
+
+        function loadQuestion() {
+            var currentQuiz = quizData[currentQuestion];
+
+            var questionImageElement = document.getElementById('question-image');
+            var choicesElement = document.getElementById('choices');
+
+            if (currentQuiz.imageSrc) {
+                questionImageElement.src = currentQuiz.imageSrc; // تعيين مصدر الصورة
+                questionImageElement.style.display = 'block'; // عرض الصورة
+            } else {
+                questionImageElement.style.display = 'none'; // إخفاء الصورة إذا لم تكن متاحة
+            }
+
+            choicesElement.innerHTML = '';
+
+            // عرض السؤال كنص عادي إذا لم يكن هناك صورة
+            if (!currentQuiz.imageSrc) {
+                choicesElement.innerHTML += '<p>' + currentQuiz.question + '</p>';
+            }
+
+            for (var i = 0; i < currentQuiz.choices.length; i++) {
+                var choice = currentQuiz.choices[i];
+                choicesElement.innerHTML += '<label><input type="radio" name="choice" value="' + choice + '"> ' + choice + '</label>';
+            }
+
+            startTimer(); // بدء الموقت عند تحميل كل سؤال
+        }
+
+        function startTimer() {
+            timerInterval = setInterval(function () {
+                document.getElementById('timer').innerHTML = 'Time Left: ' + timeLeft + 's';
+
+                if (timeLeft === 0) {
+                    clearInterval(timerInterval);
+                    alert('Time is up!'); // عرض رسالة انتهاء الوقت
+                    showResult(); // عرض النتيجة النهائية عند انتهاء الوقت
+                } else {
+                    timeLeft--;
+                }
+            }, 1000);
+        }
+
+        function checkAnswer() {
+            var selectedOption = document.querySelector('input[name="choice"]:checked');
+            if (!selectedOption) {
+                alert('Please select an answer.');
+                return;
+            }
+
+            var userAnswer = selectedOption.value;
+            var currentQuiz = quizData[currentQuestion];
+
+            var choicesLabels = document.querySelectorAll('label');
+
+            for (var i = 0; i < choicesLabels.length; i++) {
+                if (currentQuiz.correctAnswer === currentQuiz.choices[i]) {
+                    choicesLabels[i].classList.add('correct');
+                } else {
+                    choicesLabels[i].classList.add('incorrect');
+                }
+            }
+
+            if (userAnswer === currentQuiz.correctAnswer) {
+                score++;
+                document.getElementById('score').textContent = score;
+            }
+
+            clearInterval(timerInterval); // قبل التحقق من الإجابة، قم بإيقاف الموقت
+
+            currentQuestion++;
+
+            if (currentQuestion < quizData.length) {
+                setTimeout(function () {
+                    loadQuestion();
+                    resetColors();
+                }, 3000);
+            } else {
+                showResult();
+            }
+        }
+
+        function showResult() {
+            var resultElement = document.getElementById('result');
+            var correctAnswersElement = document.getElementById('correct-answers');
+
+            resultElement.innerHTML = 'Your Score: ' + score + ' out of ' + quizData.length;
+
+            correctAnswersElement.innerHTML = '<h3>Correct Answers:</h3>';
+            for (var i = 0; i < quizData.length; i++) {
+                var q = quizData[i];
+                var imgSrc = q.imageSrc;
+                var imgElement = '<img src="' + imgSrc + '" alt="Question Image">';
+                correctAnswersElement.innerHTML += imgElement + '<strong>Q: ' + q.question + '</strong><br>A: ' + q.correctAnswer + '<br>';
+            }
+
+            document.getElementById('result-container').style.display = 'block';
+            document.getElementById('retryBtn').style.display = 'block';
+        }
+
+        function resetColors() {
+            var choicesLabels = document.querySelectorAll('label');
+            for (var i = 0; i < choicesLabels.length; i++) {
+                choicesLabels[i].classList.remove('correct', 'incorrect'); // إزالة الأنماط المضافة سابقًا
+            }
+        }
+
+        function retryQuiz() {
+            currentQuestion = 0;
+            score = 0;
+            timeLeft = 600; // إعادة تعيين الوقت للقيمة الأصلية
+
+            // قم بترتيب الأسئلة بشكل عشوائي عند إعادة المحاولة
+            shuffleArray(quizData);
+
+            document.getElementById('score').textContent = score; // تحديث قيمة العداد إلى الصفر
+            loadQuestion();
+            resetColors();
+
+            document.getElementById('result-container').style.display = 'none';
+            document.getElementById('retryBtn').style.display = 'none';
+        }
+
+        loadQuestion();
+    </script>
+
+</body>
+
+</html>
